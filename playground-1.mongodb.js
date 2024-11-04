@@ -155,3 +155,42 @@ db.createCollection("transacoes", {
     },
   },
 });
+
+// Índices
+db.usuarios.createIndex({ email: 1 }, { unique: true });
+db.categorias.createIndex({ nome: 1 }, { unique: true });
+db.categorias.createIndex({ "subcategorias.nome": 1 }, { unique: true });
+
+// Inserções
+db.usuarios.insertMany([
+  {
+    nome: "Tiago Prestes",
+    email: "tiago@gmail.com",
+    endereco: "Rua Cachorro Doce 131",
+    senha: "senha123",
+  },
+  {
+    nome: "Henrique Grigoli",
+    email: "henrique@gmail.com",
+    endereco: "Rua Cachorro Quente 1099",
+    senha: "senha123",
+  },
+  {
+    nome: "Felipe Kureski",
+    email: "felipe@gmail.com",
+    endereco: "Avenida Cristóvão Colombo 420",
+    senha: "senha123",
+  },
+  {
+    nome: "Danilo Garabetti",
+    email: "danilo@gmail.com",
+    endereco: "Rua Gato Preto 10",
+    senha: "senha123",
+  },
+  {
+    nome: "Jeffrey Beijos",
+    email: "amazon@gmail.com",
+    endereco: "Rua Amazonas Utópico 37",
+    senha: "senha123",
+  },
+]);
