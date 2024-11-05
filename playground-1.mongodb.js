@@ -36,6 +36,24 @@ db.createCollection("usuarios", {
   validationAction: "error",
 });
 
+db.createCollection("subcategorias", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["nome"],
+      properties: {
+        nome: {
+          bsonType: "string",
+          minLength: 3,
+          description: "deve ser uma string com pelo menos 3 caracteres",
+        },
+      },
+    },
+  },
+  validationLevel: "strict",
+  validationAction: "error",
+});
+
 db.createCollection("categorias", {
   validator: {
     $jsonSchema: {
@@ -44,21 +62,19 @@ db.createCollection("categorias", {
       properties: {
         nome: {
           bsonType: "string",
-          description: "deve ser o nome da categoria principal",
+          minLength: 3,
+          description: "deve ser uma string com pelo menos 3 caracteres",
         },
         subcategorias: {
           bsonType: "array",
           items: {
             bsonType: "object",
-            required: ["_id", "nome"],
+            required: ["subcategoriaId"],
             properties: {
-              _id: {
+              subcategoriaId: {
                 bsonType: "objectId",
-                description: "ID único para a subcategoria",
-              },
-              nome: {
-                bsonType: "string",
-                description: "nome da subcategoria",
+                description:
+                  "deve ser o object ID para uma subcategoria existente",
               },
             },
           },
@@ -67,6 +83,8 @@ db.createCollection("categorias", {
       },
     },
   },
+  validationLevel: "strict",
+  validationAction: "error",
 });
 
 db.createCollection("produtos", {
@@ -116,7 +134,7 @@ db.createCollection("avaliacoes", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["nota", "comentario", "usuarioId"],
+      required: ["nota", "comentario", "usuarioId", "produtoId"],
       properties: {
         nota: {
           bsonType: "double",
@@ -132,9 +150,15 @@ db.createCollection("avaliacoes", {
           bsonType: "objectId",
           description: "deve ser o ObjectId de usuário existente",
         },
+        produtoId: {
+          bsonType: "objectId",
+          description: "deve ser o ObjectId de produto existente",
+        },
       },
     },
   },
+  validationLevel: "strict",
+  validationAction: "error",
 });
 
 db.createCollection("transacoes", {
@@ -154,6 +178,8 @@ db.createCollection("transacoes", {
       },
     },
   },
+  validationLevel: "strict",
+  validationAction: "error",
 });
 
 // Índices
