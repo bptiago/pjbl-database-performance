@@ -1139,3 +1139,22 @@ db.avaliacoes.insertMany([
     produtoId: 2,
   },
 ]);
+// Consultas 
+db.categorias.find(
+  { nome: "Eletrônicos" },
+  { "subcategorias.produtos": 1 }
+);
+
+db.avaliacoes.find({ produtoId: 3 });
+
+db.transacoes.insertOne({
+  id: 5,
+  usuarioId: 1,
+  produtoId: 3
+});
+
+db.categorias.updateOne(
+  { "subcategorias.produtos.id": 3 },
+  { $inc: { "subcategorias.$[].produtos.$[produto].quantidadeEmEstoque": -2 } },
+  { arrayFilters: [{ "produto.id": 3 }] }
+);
