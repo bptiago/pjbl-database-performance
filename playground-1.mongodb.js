@@ -1080,6 +1080,21 @@ db.categorias.insertOne({
   ],
 });
 
+db.categorias.updateMany(
+  {},
+  {
+    $set: {
+      "subcategorias.$[].produtos.$[].desconto": {
+        porcentagem: 0,
+        dataInicio: null,
+        dataTermino: null,
+        descontoAtivo: false,
+        precoComDesconto: null
+      }
+    }
+  }
+);
+
 db.transacoes.insertMany([
   {
     id: 0,
