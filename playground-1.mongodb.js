@@ -1089,9 +1089,9 @@ db.categorias.updateMany(
         dataInicio: null,
         dataTermino: null,
         descontoAtivo: false,
-        precoComDesconto: null
-      }
-    }
+        precoComDesconto: null,
+      },
+    },
   }
 );
 
@@ -1154,3 +1154,35 @@ db.avaliacoes.insertMany([
     produtoId: 2,
   },
 ]);
+
+// Consultas
+
+//consulta para encontrar todos os produtos de uma categoria
+db.categorias.aggregate([
+  { $match: { nome: "Eletrônicos" } },
+  { $unwind: "$subcategorias" },
+  { $unwind: "$subcategorias.produtos" },
+  {
+    $project: {
+      _id: 0,
+      produto: "$subcategorias.produtos",
+    },
+  },
+]);
+
+//consulta para encontrar todas as avaliações de um produto
+db.avaliacoes.find({ produtoId: 15 });
+
+//consulta para criar uma nova transação
+db.transacoes.insertOne({
+  id: 5,
+  usuarioId: 1,
+  produtoId: 3,
+});
+
+//consulta para atualizar a quantidade de um produto após uma compra
+db.categorias.updateOne(
+  { "subcategorias.produtos.id": 3 },
+  { $inc: { "subcategorias.$[].produtos.$[produto].quantidadeEmEstoque": -1 } },
+  { arrayFilters: [{ "produto.id": 3 }] }
+);
