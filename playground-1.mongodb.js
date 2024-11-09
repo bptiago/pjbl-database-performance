@@ -1080,21 +1080,6 @@ db.categorias.insertOne({
   ],
 });
 
-db.categorias.updateMany(
-  {},
-  {
-    $set: {
-      "subcategorias.$[].produtos.$[].desconto": {
-        porcentagem: 0,
-        dataInicio: null,
-        dataTermino: null,
-        descontoAtivo: false,
-        precoComDesconto: null,
-      },
-    },
-  }
-);
-
 db.transacoes.insertMany([
   {
     id: 0,
@@ -1157,7 +1142,7 @@ db.avaliacoes.insertMany([
 
 // Consultas
 
-//consulta para encontrar todos os produtos de uma categoria
+// Consulta para encontrar todos os produtos de uma categoria
 db.categorias.aggregate([
   { $match: { nome: "Eletrônicos" } },
   { $unwind: "$subcategorias" },
@@ -1170,19 +1155,68 @@ db.categorias.aggregate([
   },
 ]);
 
-//consulta para encontrar todas as avaliações de um produto
+// Consulta para encontrar todas as avaliações de um produto
 db.avaliacoes.find({ produtoId: 15 });
 
-//consulta para criar uma nova transação
+// Consulta para criar uma nova transação
 db.transacoes.insertOne({
   id: 5,
   usuarioId: 1,
   produtoId: 3,
 });
 
-//consulta para atualizar a quantidade de um produto após uma compra
+// Consulta para atualizar a quantidade de um produto após uma compra
 db.categorias.updateOne(
   { "subcategorias.produtos.id": 3 },
   { $inc: { "subcategorias.$[].produtos.$[produto].quantidadeEmEstoque": -1 } },
   { arrayFilters: [{ "produto.id": 3 }] }
 );
+
+// Mudanças pós sprint inicial
+
+// Adicionar object de desconto em cada produto
+db.categorias.updateMany(
+  {},
+  {
+    $set: {
+      "subcategorias.$[].produtos.$[].desconto": {
+        porcentagem: 0,
+        dataInicio: null,
+        dataTermino: null,
+        descontoAtivo: false,
+        precoComDesconto: null,
+      },
+    },
+  }
+);
+
+// Adicionar pontos de fidelidade para cada usuário
+db.usuarios.updateMany(
+  {},
+  {
+    $set: {
+      pontosFidelidade: 0,
+    },
+  }
+);
+
+// Promoção --> colocar aqui depois
+
+// Pontos de fidelidade
+function ganharPontosDeFidelidade(precoCompra, idUsuario) {
+  if (precoCompra < 20) return;
+
+  const pontos = Math.round(precoCompra / 10);
+
+  const resultado = db.usuarios.updateOne(
+    { id: idUsuario },
+    { $inc: { pontosFidelidade: pontos } },
+    { upsert: false }
+  );
+
+  return resultado.modifiedCount > 0
+    ? "Pontos de fidelidade atualizados com sucesso."
+    : `Erro ao incrementar pontos de fidelidade para o usuário de ID ${idUsuario}.`;
+}
+
+ganharPontosDeFidelidade(58, 0);
