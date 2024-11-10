@@ -7,7 +7,7 @@ db.createCollection("usuarios", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["id", "nome", "email", "endereco", "senha", "localizacao"],
+      required: ["id", "nome", "email", "endereco", "senha", "localizacao", "funcao"],
       properties: {
         id: {
           bsonType: "int",
@@ -52,11 +52,15 @@ db.createCollection("usuarios", {
             },
           },
         },
+        funcao: {
+          bsonType: "string",
+          enum: ["comprador", "vendedor"],
+          description: "Define se o usuário é 'comprador' ou 'vendedor'",
+        },
       },
     },
   },
 });
-
 
 db.createCollection("categorias", {
   validator: {
@@ -159,30 +163,33 @@ db.createCollection("transacoes", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["id", "usuarioId", "produtoId"],
+      required: ["id", "usuarioId", "produtoId", "vendedorId"],
       properties: {
         id: {
           bsonType: "int",
           minimum: 0,
-          description: "deve ser o ID (número inteiro e positivo) da transação",
+          description: "deve ser o ID (número inteiro e positivo) da transação"
         },
         usuarioId: {
           bsonType: "int",
           minimum: 0,
-          description:
-            "deve ser o ID (número inteiro e positivo) de um usuário existente",
+          description: "deve ser o ID (número inteiro e positivo) de um usuário existente"
         },
         produtoId: {
           bsonType: "int",
           minimum: 0,
-          description:
-            "deve ser o ID (número inteiro e positivo) de um produto existente",
+          description: "deve ser o ID (número inteiro e positivo) de um produto existente"
         },
-      },
-    },
+        vendedorId: {
+          bsonType: "int",
+          minimum: 0,
+          description: "deve ser o ID (número inteiro e positivo) de um vendedor existente"
+        }
+      }
+    }
   },
   validationLevel: "strict",
-  validationAction: "error",
+  validationAction: "error"
 });
 
 // Índices
@@ -194,6 +201,7 @@ db.usuarios.createIndex({ localizacao: "2dsphere" });
 db.categorias.createIndex({ nome: 1 }, { unique: true });
 db.categorias.createIndex({ "subcategorias.produtos.id": 1 }, { unique: true });
 db.categorias.createIndex({ "subcategorias.produtos.localizacao": "2dsphere" });
+db.usuarios.createIndex({ localizacao: "2dsphere" });
 
 
 db.transacoes.createIndex({ id: 1 }, { unique: true });
@@ -210,7 +218,8 @@ db.usuarios.insertMany([
     localizacao: {
       type: "Point",
       coordinates: [-51.2177, -30.0346]
-    }
+    },
+    funcao: "comprador"
   },
   {
     id: 1,
@@ -221,7 +230,8 @@ db.usuarios.insertMany([
     localizacao: {
       type: "Point",
       coordinates: [-43.1729, -22.9068]
-    }
+    },
+    funcao: "comprador"
   },
   {
     id: 2,
@@ -232,7 +242,8 @@ db.usuarios.insertMany([
     localizacao: {
       type: "Point",
       coordinates: [-38.5222, -3.7172]
-    }
+    },
+    funcao: "comprador"
   },
   {
     id: 3,
@@ -243,7 +254,8 @@ db.usuarios.insertMany([
     localizacao: {
       type: "Point",
       coordinates: [-51.0501, 0.0342]
-    }
+    },
+    funcao: "comprador"
   },
   {
     id: 4,
@@ -254,8 +266,45 @@ db.usuarios.insertMany([
     localizacao: {
       type: "Point",
       coordinates: [-60.0212, -3.1019]
-    }
-  }
+    },
+    funcao: "comprador"
+  },
+  {
+    id: 5,
+    nome: "Elanor mosca",
+    email: "elanormosca@gmail.com",
+    endereco: "Rua dos Sasagaio 89",
+    senha: "senha456",
+    localizacao: {
+      type: "Point",
+      coordinates: [-46.6333, -23.5505]
+    },
+    funcao: "vendedor"
+  },
+  {
+    id: 6,
+    nome: "Ruyter",
+    email: "ruyter@gmail.com",
+    endereco: "Rua dos Cassinos 666",
+    senha: "senha456",
+    localizacao: {
+      type: "Point",
+      coordinates: [-43.1729, -22.9068]
+    },
+    funcao: "vendedor"
+  },
+  {
+    id: 7,
+    nome: "Gabriel Borboleto",
+    email: "gborboleto@gmail.com",
+    endereco: "Rua de Interlagos 2025",
+    senha: "senha456",
+    localizacao: {
+      type: "Point",
+      coordinates: [-51.2177, -30.0346]
+    },
+    funcao: "vendedor"
+  },
 ]);
 
 db.categorias.insertOne({
@@ -1450,27 +1499,44 @@ db.transacoes.insertMany([
     id: 0,
     usuarioId: 0,
     produtoId: 15,
+    vendedorId: 5
   },
   {
     id: 1,
     usuarioId: 0,
     produtoId: 2,
+    vendedorId: 6
   },
   {
     id: 2,
     usuarioId: 3,
     produtoId: 50,
+    vendedorId: 7
   },
   {
     id: 3,
     usuarioId: 2,
     produtoId: 90,
+    vendedorId: 5
   },
   {
     id: 4,
     usuarioId: 4,
     produtoId: 2,
+    vendedorId: 6
   },
+  {
+    id: 5,
+    usuarioId: 2,
+    produtoId: 7,
+    vendedorId: 7
+  },
+  {
+    id: 6,
+    usuarioId: 0,
+    produtoId: 9,
+    vendedorId: 5
+  }
 ]);
 
 db.avaliacoes.insertMany([
@@ -1952,6 +2018,56 @@ function buscarProdutosProximos(usuarioId, raioEmMetros) {
 
   produtosProximos.forEach(doc => printjson(doc));
 }
-//Usuário 1 a 5km de distância
+
 buscarProdutosProximos(1, 5000);
+
+// Busca para encontrar a média de distância entre compradores e vendedores para transações concluídas
+db.transacoes.aggregate([
+  {
+    $lookup: {
+      from: "usuarios",
+      localField: "usuarioId",
+      foreignField: "id",
+      as: "comprador"
+    }
+  },
+  { $unwind: "$comprador" },
+
+  {
+    $lookup: {
+      from: "usuarios",
+      localField: "vendedorId",
+      foreignField: "id",
+      as: "vendedor"
+    }
+  },
+  { $unwind: "$vendedor" },
+
+  {
+    $addFields: {
+      distancia: {
+        $geoNear: {
+          near: "$comprador.localizacao",
+          distanceField: "distancia",
+          key: "vendedor.localizacao",
+          spherical: true
+        }
+      }
+    }
+  },
+
+  {
+    $group: {
+      _id: null,
+      mediaDistancia: { $avg: "$distancia" }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      mediaDistancia: 1
+    }
+  }
+]);
+
 
