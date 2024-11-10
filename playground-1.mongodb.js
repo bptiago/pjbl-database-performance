@@ -117,13 +117,6 @@ db.createCollection("categorias", {
   },
 });
 
-// Índice 2dsphere para localização dos usuários
-db.usuarios.createIndex({ localizacao: "2dsphere" });
-
-// Índice 2dsphere para localização dos produtos
-db.categorias.createIndex({ "subcategorias.produtos.localizacao": "2dsphere" });
-
-
 db.createCollection("avaliacoes", {
   validator: {
     $jsonSchema: {
