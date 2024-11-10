@@ -7,7 +7,7 @@ db.createCollection("usuarios", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["id", "nome", "email", "endereco", "senha"],
+      required: ["id", "nome", "email", "endereco", "senha", "localizacao"],
       properties: {
         id: {
           bsonType: "int",
@@ -34,12 +34,29 @@ db.createCollection("usuarios", {
           minLength: 8,
           description: "deve ser uma string com pelo menos 8 caracteres",
         },
+        localizacao: {
+          bsonType: "object",
+          required: ["type", "coordinates"],
+          properties: {
+            type: {
+              bsonType: "string",
+              enum: ["Point"],
+              description: "Deve ser uma string com o valor 'Point'",
+            },
+            coordinates: {
+              bsonType: "array",
+              minItems: 2,
+              maxItems: 2,
+              items: { bsonType: "double" },
+              description: "Coordenadas no formato [longitude, latitude]",
+            },
+          },
+        },
       },
     },
   },
-  validationLevel: "strict",
-  validationAction: "error",
 });
+
 
 db.createCollection("categorias", {
   validator: {
@@ -47,70 +64,65 @@ db.createCollection("categorias", {
       bsonType: "object",
       required: ["nome", "subcategorias"],
       properties: {
-        nome: {
-          bsonType: "string",
-          description:
-            "o nome da categoria é obrigatório e deve ser uma string",
-        },
+        nome: { bsonType: "string" },
         subcategorias: {
           bsonType: "array",
           items: {
             bsonType: "object",
             required: ["nome", "produtos"],
             properties: {
-              nome: {
-                bsonType: "string",
-                description:
-                  "o nome da subcategoria é obrigatório e deve ser uma string",
-              },
+              nome: { bsonType: "string" },
               produtos: {
-                required: [
-                  "id",
-                  "nome",
-                  "descricao",
-                  "preco",
-                  "quantidadeEmEstoque",
-                ],
-                properties: {
-                  id: {
-                    bsonType: "int",
-                    minimum: 0,
-                    description:
-                      "o ID do produto deve ser um número inteiro positivo",
-                  },
-                  nome: {
-                    bsonType: "string",
-                    description:
-                      "o nome do produto é obrigatório e deve ser uma string",
-                  },
-                  descricao: {
-                    bsonType: "string",
-                    minLength: 10,
-                    description:
-                      "deve ser uma string com pelo menos 10 caracteres",
-                  },
-                  preco: {
-                    bsonType: "double",
-                    minimum: 0.0,
-                    description: "deve ser um número decimal positivo",
-                  },
-                  quantidadeEmEstoque: {
-                    bsonType: "int",
-                    minimum: 0,
-                    description: "deve ser um número inteiro positivo",
+                bsonType: "array",
+                items: {
+                  bsonType: "object",
+                  required: [
+                    "id",
+                    "nome",
+                    "descricao",
+                    "preco",
+                    "quantidadeEmEstoque",
+                    "localizacao",
+                  ],
+                  properties: {
+                    id: { bsonType: "int" },
+                    nome: { bsonType: "string" },
+                    descricao: { bsonType: "string", minLength: 10 },
+                    preco: { bsonType: "double", minimum: 0 },
+                    quantidadeEmEstoque: { bsonType: "int", minimum: 0 },
+                    localizacao: {
+                      bsonType: "object",
+                      required: ["type", "coordinates"],
+                      properties: {
+                        type: {
+                          bsonType: "string",
+                          enum: ["Point"],
+                        },
+                        coordinates: {
+                          bsonType: "array",
+                          minItems: 2,
+                          maxItems: 2,
+                          items: { bsonType: "double" },
+                        },
+                      },
+                    },
                   },
                 },
               },
             },
           },
-          description: "lista de subcategorias dentro da categoria",
         },
       },
     },
   },
-  validationLevel: "strict",
-  validationAction: "error",
 });
+
+// Índice 2dsphere para localização dos usuários
+db.usuarios.createIndex({ localizacao: "2dsphere" });
+
+// Índice 2dsphere para localização dos produtos
+db.categorias.createIndex({ "subcategorias.produtos.localizacao": "2dsphere" });
+
 
 db.createCollection("avaliacoes", {
   validator: {
@@ -122,7 +134,7 @@ db.createCollection("avaliacoes", {
           bsonType: "int",
           minimum: 0,
           maximum: 5,
-          description: "deve ser um numero inteiro entre zero e cinco",
+          description: "deve ser um número inteiro entre zero e cinco",
         },
         comentario: {
           bsonType: ["string", "null"],
@@ -131,14 +143,16 @@ db.createCollection("avaliacoes", {
         usuarioId: {
           bsonType: "int",
           minimum: 0,
-          description:
-            "deve ser o ID (número inteiro e positivo) de um usuário existente",
+          description: "deve ser o ID (número inteiro e positivo) de um usuário existente",
         },
         produtoId: {
           bsonType: "int",
           minimum: 0,
-          description:
-            "deve ser o ID (número inteiro e positivo) de um produto existente",
+          description: "deve ser o ID (número inteiro e positivo) de um produto existente",
+        },
+        respostaVendedor: {
+          bsonType: ["string", "null"],
+          description: "a resposta do vendedor deve ser uma string ou ser nula",
         },
       },
     },
@@ -146,6 +160,7 @@ db.createCollection("avaliacoes", {
   validationLevel: "strict",
   validationAction: "error",
 });
+
 
 db.createCollection("transacoes", {
   validator: {
@@ -180,13 +195,18 @@ db.createCollection("transacoes", {
 // Índices
 db.usuarios.createIndex({ id: 1 }, { unique: true });
 db.usuarios.createIndex({ email: 1 }, { unique: true });
+db.usuarios.createIndex({ localizacao: "2dsphere" });
+
 
 db.categorias.createIndex({ nome: 1 }, { unique: true });
 db.categorias.createIndex({ "subcategorias.produtos.id": 1 }, { unique: true });
+db.categorias.createIndex({ "subcategorias.produtos.localizacao": "2dsphere" });
+
 
 db.transacoes.createIndex({ id: 1 }, { unique: true });
 
 // Inserções
+
 db.usuarios.insertMany([
   {
     id: 0,
@@ -194,6 +214,10 @@ db.usuarios.insertMany([
     email: "tiago@gmail.com",
     endereco: "Rua Cachorro Doce 131",
     senha: "senha123",
+    localizacao: {
+      type: "Point",
+      coordinates: [-51.2177, -30.0346]
+    }
   },
   {
     id: 1,
@@ -201,6 +225,10 @@ db.usuarios.insertMany([
     email: "henrique@gmail.com",
     endereco: "Rua Cachorro Quente 1099",
     senha: "senha123",
+    localizacao: {
+      type: "Point",
+      coordinates: [-43.1729, -22.9068]
+    }
   },
   {
     id: 2,
@@ -208,6 +236,10 @@ db.usuarios.insertMany([
     email: "felipe@gmail.com",
     endereco: "Avenida Cristóvão Colombo 420",
     senha: "senha123",
+    localizacao: {
+      type: "Point",
+      coordinates: [-38.5222, -3.7172] 
+    }
   },
   {
     id: 3,
@@ -215,6 +247,10 @@ db.usuarios.insertMany([
     email: "danilo@gmail.com",
     endereco: "Rua Gato Preto 10",
     senha: "senha123",
+    localizacao: {
+      type: "Point",
+      coordinates: [-51.0501, 0.0342]
+    }
   },
   {
     id: 4,
@@ -222,8 +258,137 @@ db.usuarios.insertMany([
     email: "amazon@gmail.com",
     endereco: "Rua Amazonas Utópico 37",
     senha: "senha123",
-  },
+    localizacao: {
+      type: "Point",
+      coordinates: [-60.0212, -3.1019]
+    }
+  }
 ]);
+
+// FUNCIONAM
+db.categorias.insertMany([
+  {
+    nome: "Eletrônicos",
+    subcategorias: [
+      {
+        nome: "Smartphones",
+        produtos: [
+          {
+            id: 1,
+            nome: "iPhone 14",
+            descricao: "Smartphone da Apple com câmera avançada e alta performance.",
+            preco: 6999.99,
+            quantidadeEmEstoque: 50,
+            localizacao: {
+              type: "Point",
+              coordinates: [-46.6333, -23.5505]
+            }
+          },
+          {
+            id: 2,
+            nome: "Samsung Galaxy S23",
+            descricao: "Smartphone Samsung com tela AMOLED e excelente autonomia.",
+            preco: 5999.99,
+            quantidadeEmEstoque: 70,
+            localizacao: {
+              type: "Point",
+              coordinates: [-43.1729, -22.9068] 
+            }
+          }
+        ]
+      },
+      {
+        nome: "Laptops",
+        produtos: [
+          {
+            id: 3,
+            nome: "MacBook Pro 16",
+            descricao: "Laptop Apple com processador M2 para alta performance.",
+            preco: 14999.99,
+            quantidadeEmEstoque: 30,
+            localizacao: {
+              type: "Point",
+              coordinates: [-46.6333, -23.5505] 
+            }
+          },
+          {
+            id: 4,
+            nome: "Dell XPS 13",
+            descricao: "Ultrabook compacto e potente da Dell.",
+            preco: 9999.99,
+            quantidadeEmEstoque: 40,
+            localizacao: {
+              type: "Point",
+              coordinates: [-48.5734, -27.5954]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    nome: "Livros",
+    subcategorias: [
+      {
+        nome: "Ficção",
+        produtos: [
+          {
+            id: 5,
+            nome: "O Senhor dos Anéis",
+            descricao: "Uma épica obra de fantasia escrita por J.R.R. Tolkien.",
+            preco: 79.99,
+            quantidadeEmEstoque: 200,
+            localizacao: {
+              type: "Point",
+              coordinates: [-51.2177, -30.0346]
+            }
+          },
+          {
+            id: 6,
+            nome: "Duna",
+            descricao: "Romance de ficção científica por Frank Herbert.",
+            preco: 89.99,
+            quantidadeEmEstoque: 150,
+            localizacao: {
+              type: "Point",
+              coordinates: [-60.0212, -3.1019]
+            }
+          }
+        ]
+      },
+      {
+        nome: "Não Ficção",
+        produtos: [
+          {
+            id: 7,
+            nome: "Sapiens",
+            descricao: "História breve da humanidade, por Yuval Noah Harari.",
+            preco: 69.99,
+            quantidadeEmEstoque: 100,
+            localizacao: {
+              type: "Point",
+              coordinates: [-46.6333, -23.5505]
+            }
+          },
+          {
+            id: 8,
+            nome: "A Arte da Guerra",
+            descricao: "Clássico de estratégia militar escrito por Sun Tzu.",
+            preco: 29.99,
+            quantidadeEmEstoque: 300,
+            localizacao: {
+              type: "Point",
+              coordinates: [-43.1729, -22.9068]
+            }
+          }
+        ]
+      }
+    ]
+  }
+]);
+
+// FUNCIONAM
+
 
 db.categorias.insertOne({
   nome: "Eletrônicos",
@@ -1174,6 +1339,13 @@ db.categorias.updateOne(
 
 // Mudanças pós sprint inicial
 
+// Adicionar resposta do vendedos
+db.avaliacoes.updateOne(
+  { usuarioId: 0, produtoId: 15 },
+  { $set: { respostaVendedor: "Obrigado pelo feedback! Estamos à disposição." } }
+); 
+
+
 // Adicionar object de desconto em cada produto
 db.categorias.updateMany(
   {},
@@ -1204,9 +1376,9 @@ db.usuarios.updateMany(
 
 // Pontos de fidelidade
 function ganharPontosDeFidelidade(precoCompra, idUsuario) {
-  if (precoCompra < 20) return;
+  if (precoCompra < 20) return "Compra insuficiente para ganhar cupons!";
 
-  const pontos = Math.round(precoCompra / 10);
+  const pontos = Math.round(precoCompra / 20);
 
   const resultado = db.usuarios.updateOne(
     { id: idUsuario },
@@ -1215,8 +1387,26 @@ function ganharPontosDeFidelidade(precoCompra, idUsuario) {
   );
 
   return resultado.modifiedCount > 0
-    ? "Pontos de fidelidade atualizados com sucesso."
+    ? `${pontos} ponto(s) de fidelidade adicionado(s) para o usuário de ID ${idUsuario}`
     : `Erro ao incrementar pontos de fidelidade para o usuário de ID ${idUsuario}.`;
 }
 
-ganharPontosDeFidelidade(58, 0);
+ganharPontosDeFidelidade(60, 2);
+
+function calcularDescontoComPontosFidelidade(precoCompra, idUsuario) {
+  const usuario = db.usuarios.findOne(
+    { id: idUsuario },
+    { id: 1, email: 1, pontosFidelidade: 1 }
+  );
+
+  if (usuario == null) return `Não foi encontrado usuário com ID ${idUsuario}`;
+
+  // Cada ponto de fidelidade vale 5 reais.
+  const desconto = ((usuario.pontosFidelidade * 5) / precoCompra) * 100;
+
+  return desconto >= 100
+    ? "100% de desconto"
+    : `${desconto.toFixed(1)}% de desconto`;
+}
+
+calcularDescontoComPontosFidelidade(30, 2);
