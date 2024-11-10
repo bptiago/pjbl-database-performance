@@ -1564,6 +1564,39 @@ db.categorias.updateOne(
 );
 
 // Mudanças pós sprint inicial
+db.categorias.aggregate([
+  // Passo 1: Desempacotar as subcategorias e os produtos
+  { $unwind: "$subcategorias" },
+  { $unwind: "$subcategorias.produtos" },
+  
+  // Passo 2: Filtrar produtos pela localização dentro de uma área geográfica específica (exemplo de coordenadas)
+  {
+    $match: {
+      "subcategorias.produtos.localizacao": {
+        $geoWithin: {
+          $centerSphere: [
+            [-43.1729, -22.9068],  // Coordenadas do centro da área (exemplo: Rio de Janeiro)
+            0.1  // Raio em radianos (aproximadamente 10 km)
+          ]
+        }
+      }
+    }
+  },
+
+  // Passo 3: Agrupar os produtos por categoria e contar o número de ocorrências
+  {
+    $group: {
+      _id: "$subcategorias.nome",  // Agrupar pelo nome da subcategoria
+      totalProdutos: { $sum: 1 }  // Contar o número de produtos em cada subcategoria
+    }
+  },
+
+  // Passo 4: Ordenar pelos produtos para encontrar a categoria mais popular
+  { $sort: { totalProdutos: -1 } },
+
+  // Passo 5: Limitar para a categoria mais popular
+  { $limit: 1 }
+]);
 
 // Adicionar resposta do vendedos
 db.avaliacoes.updateOne(
