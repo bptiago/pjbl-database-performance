@@ -1530,3 +1530,83 @@ db.usuarios.updateMany(
     },
   }
 );
+
+// Consultas
+
+// Consulta para encontrar todos os produtos de uma categoria
+db.categorias.aggregate([
+  { $match: { nome: "Eletrônicos" } },
+  { $unwind: "$subcategorias" },
+  { $unwind: "$subcategorias.produtos" },
+  {
+    $project: {
+      _id: 0,
+      produto: "$subcategorias.produtos",
+    },
+  },
+]);
+
+// Consulta para encontrar todas as avaliações de um produto
+db.avaliacoes.find({ produtoId: 15 });
+
+// Consulta para criar uma nova transação
+db.transacoes.insertOne({
+  id: 5,
+  usuarioId: 1,
+  produtoId: 3,
+});
+
+// Consulta para atualizar a quantidade de um produto após uma compra
+db.categorias.updateOne(
+  { "subcategorias.produtos.id": 3 },
+  { $inc: { "subcategorias.$[].produtos.$[produto].quantidadeEmEstoque": -1 } },
+  { arrayFilters: [{ "produto.id": 3 }] }
+);
+
+// Mudanças pós sprint inicial
+
+// Adicionar resposta do vendedos
+db.avaliacoes.updateOne(
+  { usuarioId: 0, produtoId: 15 },
+  { $set: { respostaVendedor: "Obrigado pelo feedback! Estamos à disposição." } }
+); 
+
+
+// Promoção --> colocar aqui depois
+
+// Pontos de fidelidade
+function ganharPontosDeFidelidade(precoCompra, idUsuario) {
+  if (precoCompra < 20) return "Compra insuficiente para ganhar cupons!";
+
+  const pontos = Math.round(precoCompra / 20);
+
+  const resultado = db.usuarios.updateOne(
+    { id: idUsuario },
+    { $inc: { pontosFidelidade: pontos } },
+    { upsert: false }
+  );
+
+  return resultado.modifiedCount > 0
+    ? `${pontos} ponto(s) de fidelidade adicionado(s) para o usuário de ID ${idUsuario}`
+    : `Erro ao incrementar pontos de fidelidade para o usuário de ID ${idUsuario}.`;
+}
+
+ganharPontosDeFidelidade(60, 2);
+
+function calcularDescontoComPontosFidelidade(precoCompra, idUsuario) {
+  const usuario = db.usuarios.findOne(
+    { id: idUsuario },
+    { id: 1, email: 1, pontosFidelidade: 1 }
+  );
+
+  if (usuario == null) return `Não foi encontrado usuário com ID ${idUsuario}`;
+
+  // Cada ponto de fidelidade vale 5 reais.
+  const desconto = ((usuario.pontosFidelidade * 5) / precoCompra) * 100;
+
+  return desconto >= 100
+    ? "100% de desconto"
+    : `${desconto.toFixed(1)}% de desconto`;
+}
+
+calcularDescontoComPontosFidelidade(30, 2);
