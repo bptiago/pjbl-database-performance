@@ -2068,7 +2068,6 @@ db.transacoes.aggregate([
     }
   },
   { $unwind: "$comprador" },
-
   {
     $lookup: {
       from: "usuarios",
@@ -2078,20 +2077,18 @@ db.transacoes.aggregate([
     }
   },
   { $unwind: "$vendedor" },
-
   {
     $addFields: {
       distancia: {
-        $geoNear: {
-          near: "$comprador.localizacao",
-          distanceField: "distancia",
-          key: "vendedor.localizacao",
-          spherical: true
+        $sqrt: {
+          $add: [
+            { $pow: [{ $subtract: [{ $arrayElemAt: ["$comprador.localizacao.coordinates", 0] }, { $arrayElemAt: ["$vendedor.localizacao.coordinates", 0] }] }, 2] },
+            { $pow: [{ $subtract: [{ $arrayElemAt: ["$comprador.localizacao.coordinates", 1] }, { $arrayElemAt: ["$vendedor.localizacao.coordinates", 1] }] }, 2] }
+          ]
         }
       }
     }
   },
-
   {
     $group: {
       _id: null,
