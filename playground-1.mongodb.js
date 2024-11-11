@@ -1,6 +1,12 @@
 const dbName = "1SUPERGRUPO";
 use(dbName);
 
+//Grupo: 
+// Danilo Garabetti
+// Felipe Kureski
+// Henrique Grigoli
+// Tiago Prestes
+
 // Coleções
 
 db.createCollection("usuarios", {
