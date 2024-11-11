@@ -1623,9 +1623,10 @@ db.avaliacoes.find({ produtoId: 15 });
 
 // Consulta para criar uma nova transação
 db.transacoes.insertOne({
-  id: 5,
+  id: 7,
   usuarioId: 1,
   produtoId: 3,
+  vendedorId: 5
 });
 
 // Consulta para atualizar a quantidade de um produto após uma compra
